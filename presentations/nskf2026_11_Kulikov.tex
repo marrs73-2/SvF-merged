@@ -1,0 +1,494 @@
+% !TeX program = xelatex
+% Слайды к докладу на НСКФ'2026 на основе svf_so_nscf.tex
+% Компиляция:  xelatex svf_so_slides.tex   (второй проход — для номеров слайдов)
+
+\documentclass[10pt,aspectratio=169]{beamer}
+
+\usetheme{metropolis}
+
+% \makeatletter
+% \def\beamer@framenotesbegin{%
+%     \usebeamercolor[fg]{normal text}%
+%     \gdef\beamer@noteitems{}%
+%     \gdef\beamer@notes{}%
+% }
+% \makeatother
+
+\usepackage[utf8]{inputenc}
+\usepackage[russian,english]{babel}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{xcolor}
+% \usepackage{pdfcomment}
+% \setbeameroption{show notes}
+% \let\oldnote\note
+% \renewcommand{\note}[1]{%
+%   \pdfcomment[author=Speaker, color=0 0 0, opacity=1]{#1}%
+% }
+% ——— Обозначения по тексту статьи svf_so_nscf.tex ———
+\usepackage{xspace}
+
+\newcommand{\LRb}[1]{\left(#1\right)}
+\newcommand{\LRB}[1]{\Bigl(#1\Bigr)}
+\newcommand{\LRC}[1]{\Bigl\{#1\Bigr\}}
+\newcommand{\SET}[1]{\left\{#1\right\}}
+\newcommand{\FRAC}[2]{\frac{\displaystyle #1}{\displaystyle #2}}
+\newcommand{\MOD}[1]{\left|#1\right|}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\LE}{{\leqslant}}
+\newcommand{\GE}{{\geqslant}}
+\newcommand{\EQ}{{=}}
+\newcommand{\IN}{{\in}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\EI}{K}
+\newcommand{\LK}{L}
+\newcommand{\CV}{\mathrm{CV}}
+\newcommand{\MSD}{\mathrm{MSE}}
+\newcommand{\FS}{\mathcal{R}}
+\newcommand{\argmin}{\mathop{\mathrm{arg\,min}}}
+\newcommand{\argmax}{\mathop{\mathrm{arg\,max}}}
+\newcommand{\dima}{m}%{{n_{\alpha}}} % dimension of alpha
+
+\newcommand{\spotoptim}{\texttt{spotoptim}\xspace}
+\newcommand{\oldoptim}{\texttt{oldoptim}\xspace}
+
+% ——— Нижний колонтитул ———
+\newcommand{\conferenceFooter}{%
+  НСКФ'2026. Суррогатная оптимизация в SvF-технологии, %
+  Волошинов В.В., Куликов Ф.Е., Соколов А.В.}
+
+\setbeamersize{text margin left=0.35cm, text margin right=0.35cm}
+\setbeamerfont{footline}{size=\fontsize{6}{7}\selectfont}
+\setbeamercolor{footline}{fg=structure.fg!60!black, bg=white}
+
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=2.1ex,dp=0.5ex,%
+    leftskip=0.35cm,rightskip=0.35cm plus1fil]{footline}%
+    \usebeamerfont{footline}\conferenceFooter\hfill\insertframenumber/\inserttotalframenumber%
+  \end{beamercolorbox}%
+}
+
+% \setbeameroption{show notes on second screen=right} 
+% \setbeamertemplate{note page}{%
+%   \insertnote
+% }
+
+% ——— Титульный слайд ———
+\title[уррогатная оптимизация в SvF-технологии]{%
+  Сравнение алгоритмов суррогатной оптимизации\\ в SvF-технологии сбалансированной идентификации \\
+  \textcolor{gray}{\small Докладчик: Куликов Филипп Евгеньевич} \\[-1.2ex]
+  \textcolor{gray}{\small Авторы:  В. В. Волошинов, Ф. Е. Куликов, А. В. Соколов} \\[-1.2ex]
+  \textcolor{gray}{\small Организация:  Центр распределённых вычислений ИППИ РАН}}
+\author[Волошинов, Куликов, Соколов]{%
+  В. В. Волошинов, Ф. Е. Куликов, А. В. Соколов}
+\institute[ИППИ РАН]{Институт проблем передачи информации им.\ А.\,А.~Харкевича РАН, Москва}
+\date{НСКФ'2026}
+
+\begin{document}
+
+% ============================ 1 ============================
+\begin{frame}[plain]
+  \usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle
+\end{frame}
+
+% ============================ 2 ============================
+\begin{frame}{Структура доклада}
+    SvF-технология (Simplicity vs Fitting) развивается больше 10 лет,
+      применяется в прикладных задачах идентификации математических моделей.
+
+    План презентации:
+
+    \begin{itemize}
+    \item Описание принципов SvF технологии
+    \item Базовый оптимизационный алгоритм
+    \item Теоретические основы имплементированного алгоритма
+    \item Сравнение эффективности алгоритмов
+    \item Выводы
+  \end{itemize}
+
+\note[item]{Emphasize the first bullet point.}
+  \note[item]{Mention that handouts omit speaker notes.}
+\end{frame}
+
+% ============================ 3 ============================
+\begin{frame}{Описание SvF}
+  SvF технология позволяет получить интерпретируемую модель для описания набора данных.
+
+  Пример модели в виде системы ОДУ второго порядка для линейного маятника:
+
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \vspace{1cm}
+      $$
+      \begin{cases}
+      \ddot{x} = f(x, v) \\
+      \dot{x} = v
+      \end{cases}
+      $$
+
+      $$
+      F(x, K, \alpha) = \frac{1}{|K|} \sum_{k \in K} (z_k - x(t_k))^2
+       + \alpha \int_T \left( \frac{d^2 x}{dt^2} \right)^2 dt
+      $$
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \begin{center}
+        \includegraphics[width=\textwidth]{images/Regionx.png}\\[-0.5ex]
+      \end{center}
+    \end{column}
+  \end{columns}
+
+%  \[
+%    Q \EQ \SET{x\in [-0.1, 2.2], v \in [-1, 1.5] : f_i(x)\LE 0\ (i\in I),\ g_j(x)\EQ 0\ (j\in J)}.
+%  \]
+
+\note {ЗАМЕТКИ ДЛЯ СЛАЙДА}
+\end{frame}
+
+
+% ============================ 4 ============================
+
+\begin{frame}{Нижний уровень оптимизации в SvF}
+
+Типичным критерием выбора модели является минимизация функционала
+$$
+F(x,\EI^\prime,\alpha) = F_D(x,\EI^\prime) + \FS(\alpha ,x) \to \min\limits_{x\in Q},
+$$
+
+$$
+\FS(\alpha ,x) =  \iint [ \alpha_x^2 \left( \frac{\partial^2 f}{\partial x^2} \right)^2
++ 2\alpha_x \alpha_v \left( \frac{\partial^2 f}{\partial x \partial v} \right)^2 + \alpha_v^2 \left( \frac{\partial^2 f}{\partial v^2} \right)^2 ] dx dv.
+$$
+
+
+  Разбиение $\EI = E \cup T$, $E\cap T=\varnothing$. Для заданного $\alpha$:
+  \[
+    x_E^\alpha = \argmin_{x\in Q} F(x,E,\alpha),
+    \qquad
+    \CV^\alpha_{E,T} = \MSD(x_E^\alpha, T).
+  \]
+  По $\LK$ парам $(E_\ell,T_\ell)$ --- агрегированная CV-ошибка 
+  $\CV(\alpha)=\FRAC{1}{\sum_\ell \abs{T_\ell}}\sum_\ell \abs{T_\ell}\CV^\alpha_{E_\ell,T_\ell}$.
+
+  \begin{itemize}\setlength{\itemsep}{1pt}
+    \item Вызовы решения целого набор задач дорогостоящие
+    \item Задачи нижнего уровня независимы --- параллелятся.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Предсказания модели при различных $\alpha$}
+  \begin{center}
+    \includegraphics[width=0.95\textwidth]{images/comparison_of_apha_2.png}\\[-0.5ex]
+  \end{center}
+\end{frame}
+
+% ============================ 5 ============================
+\begin{frame}{Базовый алгоритм: квадратичный суррогат}
+  По накопленным парам $\SET{\LRB{\CV(\alpha^\nu),\,\alpha^\nu}}_{\nu\EQ 1}^N$
+  строится многочлен 2-й степени
+  \[
+    \Pi(\bm{\pi},\alpha)=\sum_{1\LE i\LE j\LE m}\pi_{ij}\alpha_i\alpha_j
+      +\sum_{1\LE i\LE m}\pi_i\alpha_i+\pi_0,
+    \qquad \bm{\pi}\in\RR^{\frac{(m+2)(m+1)}{2}}.
+  \]
+  Коэффициенты --- из сильно выпуклой регуляризованной задачи
+  \[
+    \sum_{\nu\EQ 1}^{N}\FRAC{\LRb{\CV(\alpha^\nu)-\Pi(\bm{\pi},\alpha^\nu)}^2}
+      {e^{w\norm{\alpha^\nu-\alpha^N}}}
+    \;+\;\mu\LRB{\sum_{i\LE j}\pi_{ij}^2}\;\to\!\min_{\bm{\pi}} .
+  \]
+  Новая точка --- локальный минимум суррогата в пределах допустимого радиуса:
+  \[
+    \Pi(\bm{\pi}^*,\alpha)\to\min_{\alpha\in\RR_+^m,\ \norm{\alpha-\alpha^N}\LE s}.
+  \]
+  Погрешность $\Delta(w,\mu,s)=\MOD{\CV(\alpha^*)-\Pi(\bm{\pi}(w,\mu),\alpha^*)}$
+  используется для настройки $w,\mu$.
+\end{frame}
+
+% ============================ 6 ============================
+\begin{frame}{Базовый алгоритм: эвристики}
+  \begin{itemize}
+    \item Начальная последовательность --- малые возмущения одного
+      заданного вектора $\alpha$ ($m+1$ точка).
+    \item Параметры $w$, $\mu$ поочерёдно мультипликативно корректируются
+      ($\mu'=(1+d)\mu$, $d\EQ 0.1\%$).
+    \item Радиус доверия $s$: сначала «агрессивно» растёт,
+      далее --- по эмпирическим правилам.
+    \item \textbf{Проблема «оврага»}: при $m>1$ точки прыгают со «склона»
+      на «склон». Признак --- большой косинус между соседними
+      $\Delta^\nu\alpha=\alpha^\nu-\alpha^{\nu-1}$.
+      Реакция --- шаг вдоль усреднённого направления.
+  \end{itemize}
+  \vspace{0.5em}
+
+   \textbf{Реализация:} \texttt{https://github.com/distcomp/SvF/SvFlib/SurMin.py}.
+\end{frame}
+
+% ============================ 7 ============================
+\begin{frame}{Описание алгоритма в spotoptim}
+  $Y(x)$ --- реализация гауссова процесса; корреляция значений:
+  \[
+    \mathrm{Corr}\bigl[Y(x_i),Y(x_j)\bigr]
+      = \exp\Bigl(-\sum_{\ell=1}^{m}\theta_\ell \abs{x_{i\ell}-x_{j\ell}}^{p_\ell}\Bigr),
+    \qquad p_\ell\EQ 2.
+  \]
+
+$$
+L({Y(x_1)}, \ldots, {Y(x_n)} | \mu, \sigma) = \frac{1}{(2\pi\sigma^2)^{n/2} |\mathbf{R}|^{1/2}} \exp \left[ -\frac{(\mathbf{y} - \mathbf{1}\mu)^T \mathbf{R}^{-1} (\mathbf{y} - \mathbf{1}\mu)}{2\sigma^2} \right],
+$$
+
+  % Параметры $\mu$, $\sigma^2$, $\bm{\theta}$ --- по максимальному правдоподобию;
+  % после исключения $\hat\mu$, $\hat\sigma^2$ максимизируется
+  % \[
+  %   -\frac{n}{2}\log\hat\sigma^2 - \frac12 \log\abs{\mathbf{R}}
+  %   \;\to\max_{\bm{\theta}}
+  % \qquad\text{(генетический алгоритм).}
+  % \]
+  Предсказание в новой точке $x^*$:
+  $$
+    \hat y(x^*) = \hat\mu + \mathbf{r}^T\mathbf{R}^{-1}(\mathbf{y}-\mathbf{1}\hat\mu),
+  $$
+  $$
+\hat{y}(\mathbf{x}^{*}) = a + \sum_{i=1}^{n} b_{i} \, \varphi(\mathbf{x}^{*} - \mathbf{x}_{i})
+$$
+где $\phi(z)$ - радиальная базисная функция вида
+$$
+\varphi(\mathbf{z}) = \exp\left(-\sum_{\ell=1}^{\dima} \theta_{\ell} \, |z_{\ell}|^{p_{\ell}}\right) 
+$$
+\end{frame}
+% ============================ 8 ============================
+\begin{frame}{Функции приобретения}
+  Точка нового запуска $\CV(\alpha)$ выбирается по суррогатной модели.
+  В \spotoptim три варианта, тестировались два:
+
+  \vspace{0.6em}
+  \begin{description}\setlength{\itemsep}{0.6em}
+    \item[Математическое ожидание (\spotoptim-y)]
+      $\alpha^{*}=\argmin \hat y(\alpha)$, дисперсия игнорируется.
+      Быстрая сходимость, глобальный минимум не гарантируется.
+      Глобальный поиск --- дифференциальная эволюция.
+
+    \item[Expected Improvement (\spotoptim-ei)]
+    $$
+    EI(\mathbf{x}) = \int_{I=0}^{I=\infty} I \left\{ \frac{1}{\sqrt{2\pi s(\mathbf{x})}} \exp \left[ -\frac{(f_{\text{min}} - I - \hat{y}(\mathbf{x}))^2}{2s^2(\mathbf{x})} \right] \right\} dI.
+    $$
+  \end{description}
+  \vfill
+  Базовый алгоритм: детерминированный, без оценки неопределённости.
+\end{frame}
+
+\begin{frame}{Визуализация модели в spotoptim, mode=y}
+  \begin{center}
+    \includegraphics[width=0.6\textwidth]{images/figure_acquisition_mode_y.png}\\[-0.5ex]
+  \end{center}
+\end{frame}
+
+\begin{frame}{Визуализация модели в spotoptim, mode=ei}
+  \begin{center}
+    \includegraphics[width=0.6\textwidth]{images/figure_acquisition_mode_ei.png}\\[-0.5ex]
+  \end{center}
+\end{frame}
+
+
+% ============================ 9 ============================
+\begin{frame}{Методика сравнения}
+  Здесь и далее базовый алгоритм помечен как oldoptim
+
+  Сравниваются три метода:
+  \[
+    \oldoptim,\qquad \spotoptim\text{-}y,\qquad \spotoptim\text{-}ei.
+  \]
+  \begin{enumerate}\setlength{\itemsep}{2pt}
+    \item В каждой задаче --- фиксированный лимит итераций (60).
+    \item \spotoptim: равномерный набор начальных точек в прямоугольнике
+      допустимых значений $\alpha$.
+    \item \oldoptim: одна стартовая точка (центр области).
+    \item \textbf{Контроль:} \oldoptim перезапускается из лучшей точки
+      начального набора \spotoptim.
+  \end{enumerate}
+  \vspace{0.4em}
+
+\end{frame}
+
+% ============================ 10 ============================
+\begin{frame}{Тест 1. Линейный маятник, 3 коэффициента регуляризации}
+  \[
+    \frac{d^2x}{dt^2}=f(x,v),\quad v=\frac{dx}{dt},
+    \qquad f\text{ --- полином 6-й степени от } (x,v).
+  \]
+  Итераций: 60; начальных точек \spotoptim: 12, область $[0.01,1]$;
+  старт \oldoptim: $[0.5,0.5,0.5]$.
+  \begin{center}
+    \includegraphics[width=0.72\textwidth]{images/Osc-1.pdf}\\[-0.5ex]
+    {\footnotesize Лучшее значение $\CV(\alpha)$ по номеру итерации.}
+  \end{center}
+\end{frame}
+
+% ============================ 11 ============================
+\begin{frame}{Тест 1: результаты}
+  % \begin{table}\centering\small
+  %   \begin{tabular}{lcc}
+  %     \toprule
+  %     \textbf{Метод} & $\CV$ \textbf{ошибка} & \textbf{Веса $\alpha$}\\
+  %     \midrule
+  %     \oldoptim & 46.78 & $[0.292,\,0.519,\,0.515]$\\
+  %     \spotoptim-y & \textbf{17.98} & $[0.113,\,0.996,\,0.619]$\\
+  %     \spotoptim-ei & 17.98 & $[0.116,\,0.865,\,0.946]$\\
+  %     \oldoptim\ (хороший старт) & 17.99 & $[0.119,\,0.944,\,0.583]$\\
+  %     \bottomrule
+  %   \end{tabular}
+  % \end{table}
+  \begin{center}
+    \includegraphics[width=0.6\textwidth]{images/Osc-2.pdf}\\[-0.5ex]
+  \end{center}
+  \vspace{0.6em}
+  \begin{itemize}\setlength{\itemsep}{2pt}
+    \item Из «центра» базовый алгоритм сходился медленно и
+      остановился втрое хуже ($46.8$ против $18.0$).
+    \item С удачной начальной точкой --- результат практически тот же,
+      что у обоих \spotoptim.
+    \item Две стратегии \spotoptim дали почти идентичный итог.
+  \end{itemize}
+\end{frame}
+
+% ============================ 12 ============================
+\begin{frame}{Тест 2. Транспирация сосны, 2 коэффициента регуляризации}
+  Аппроксимируется сеточная функция $E(Q,VPD)$ --- транспирация от
+  солнечной радиации $Q$ и дефицита давления пара $VPD$.
+  Дифференциальных уравнений нет.
+  Итераций: 60; начальных точек \spotoptim: 10, область $[0,1]$;
+  старт \oldoptim: $[0.5,0.5]$.
+  \begin{center}
+    \includegraphics[width=0.72\textwidth]{images/E-1.pdf}\\[-0.5ex]
+    {\footnotesize Лучшее значение $\CV(\alpha)$ по номеру итерации.}
+  \end{center}
+\end{frame}
+
+% ============================ 13 ============================
+\begin{frame}{Тест 2: результаты}
+  % \begin{table}\centering\small
+  %   \begin{tabular}{lcc}
+  %     \toprule
+  %     \textbf{Метод} & $\CV$ \textbf{ошибка} & \textbf{Веса $\alpha$}\\
+  %     \midrule
+  %     \oldoptim & 48.53 & $[0.112,\,0.186]$\\
+  %     \spotoptim-y & \textbf{48.52} & $[0.099,\,0.187]$\\
+  %     \spotoptim-ei & 48.55 & $[0.118,\,0.186]$\\
+  %     \oldoptim\ (хороший старт) & 48.52 & $[0.097,\,0.189]$\\
+  %     \bottomrule
+  %   \end{tabular}
+  % \end{table}
+    \begin{center}
+    \includegraphics[width=0.6\textwidth]{images/E-2.pdf}\\[-0.5ex]
+  \end{center}
+  \vspace{0.6em}
+  \begin{itemize}\setlength{\itemsep}{2pt}
+    \item Различия --- в четвёртом знаке: все методы нашли один и тот же оптимум.
+    \item Базовый алгоритм сходился медленнее по итерациям,
+      но монотонно и без «оврага».
+    \item При $m=2$ (без дифференциальных уравнений) базовый алгоритм
+      полностью работоспособен.
+  \end{itemize}
+\end{frame}
+
+% ============================ 14 ============================
+\begin{frame}{Тест 3. Три планеты, 10 коэффициентов регуляризации}
+  Идентифицируются массы и закон притяжения $f(r)$ по зашумлённым
+  траекториям трёх тел ($\approx 6\%$ гауссова шума):
+  \[
+    \textstyle
+    \ddot r_i(t)=G\sum_{j\neq i}\frac{r_j(t)-r_i(t)}{\norm{r_i(t)-r_j(t)}^3},
+    \qquad i=1{:}3 .
+  \]
+  $f(r)$ --- полином 8-й степени, $f(1)=1$.
+  Итераций: 60; начальных точек \spotoptim: 20, область $[0,0.1]$.
+  \begin{center}
+    \includegraphics[width=0.66\textwidth]{images/3Body-1.pdf}\\[-0.5ex]
+    {\footnotesize Базовый алгоритм остановился преждевременно.}
+  \end{center}
+\end{frame}
+
+% ============================ 15 ============================
+\begin{frame}{Тест 3: результаты}
+  \begin{table}\centering\small
+    \begin{tabular}{lc}
+      \toprule
+      \textbf{Метод} & $\CV$ \textbf{ошибка}\\
+      \midrule
+      \oldoptim & 12.64\\
+      \spotoptim-y & 4.12\\
+      \spotoptim-ei & \textbf{4.12}\\
+      \oldoptim\ (хороший старт, 32 точки) & 4.12\\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+  \vspace{0.6em}
+  \begin{itemize}\setlength{\itemsep}{2pt}
+    \item Размерность $m=10$ --- базовый алгоритм «застрял»: ошибка втрое выше.
+    \item Даже с 32 начальными точками улучшение составило лишь
+      два десятка итераций, затем остановка при
+      $\norm{\Delta\alpha}<10^{-7}$.
+    \item \spotoptim уверенно работает в высокой размерности ---
+      главное практическое преимущество.
+  \end{itemize}
+\end{frame}
+
+% ============================ 16 ============================
+\begin{frame}{Выводы из сравнения}
+  \begin{table}\centering
+    \begin{tabular}{lccc}
+      \toprule
+      & $m\EQ 2$ & $m\EQ 3$ & $m\EQ 10$\\
+      \midrule
+      \oldoptim\ (центр области) & \checkmark & $\times$ & $\times$\\
+      \oldoptim\ (хороший старт) & \checkmark & \checkmark & \checkmark\\
+      \spotoptim-y, \spotoptim-ei & \checkmark & \checkmark & \checkmark\\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+  \vspace{0.5em}
+  \begin{itemize}\setlength{\itemsep}{2pt}
+    \item При малом числе весов базовый алгоритм \textbf{не хуже} \spotoptim
+    \item Ключевой фактор для базового алгоритма --- \textbf{выбор начальной точки},
+      ранее явно не изучавшийся.
+    \item Равномерное покрытие области начальных точек удобно и доступно пока только 
+    вместе с spotoptim.
+    \item \spotoptim лучше показывает себя при росте количества 
+    коэффициентов регуляризации.
+  \end{itemize}
+\end{frame}
+
+% ============================ 17 ============================
+\begin{frame}{Результаты}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Подтверждено}
+      \begin{itemize}\setlength{\itemsep}{1pt}
+        \item Базовый алгоритм работоспособен.
+        \item Результаты предыдущих публикаций, полученные с ним,
+          корректны.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Расширено}
+      \begin{itemize}\setlength{\itemsep}{1pt}
+        \item Выбор двух дополнительных алгоритмов суррогатной оптимизации из spotoptim.
+        \item Блок \texttt{COMPARE} в .mng --- графики сравнения методов.
+        \item Несколько расчётов с разными стартами из RES-файлов
+          в одном задании.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ============================ 18 ============================
+\begin{frame}{}
+  \centering\Large Спасибо за внимание!
+\end{frame}
+
+\end{document}
